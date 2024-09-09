@@ -192,8 +192,8 @@ function App() {
       throw Error('padoNetworkClientRef not init');
     }
     const dataId = await padoNetworkClientRef.current.uploadData(data, dataTag, priceInfo, dataPermissions, {
-      t: 2,
-      n: 3
+      t: 3,
+      n: 4
     });
 
     // upload your data (If you want to do a local test, refer to the README to initialize arweave and then pass it to uploadData)

@@ -1,26 +1,29 @@
+// import { ethers } from 'ethers';
+import { arseedingBase64ToHexStr, arseedingHexStrToBase64 } from '../common/str-util';
+import { DEFAULT_ENCRYPTION_SCHEMA, PADO_NETWORK_CONTRACT_ADDRESS } from '../config';
 import Data from '../contracts/evm/data';
 import Fee from '../contracts/evm/fee';
 import Helper from '../contracts/evm/helper';
 import Task from '../contracts/evm/task';
 import Worker from '../contracts/evm/worker';
-import { DEFAULT_ENCRYPTION_SCHEMA, PADO_NETWORK_CONTRACT_ADDRESS } from '../config';
 import {
   ChainName,
+  StorageType,
+  TaskType,
+  Uint256,
+  Wallets,
+  type Address,
   type CommonObject,
   type EncryptionSchema,
   type FeeTokenInfo,
-  type PriceInfo,
-  StorageType,
-  Wallets,
-  TaskType, type Address, Uint256
+  type PriceInfo
 } from '../types/index';
 import BaseContract from './base-contract';
-// import { ethers } from 'ethers';
-import { arseedingBase64ToHexStr, arseedingHexStrToBase64 } from '../common/str-util';
+
 // import { THRESHOLD_2_3 } from '../common/utils';
 
 const TASK_MAPPING: { [key in TaskType]: number } = {
-  [TaskType.DATA_SHARING]: 0,
+  [TaskType.DATA_SHARING]: 0
 };
 
 export default class EthereumContract extends BaseContract {
@@ -60,11 +63,10 @@ export default class EthereumContract extends BaseContract {
     permissionCheckers: Address[],
     encryptionSchema: EncryptionSchema = DEFAULT_ENCRYPTION_SCHEMA
   ) {
-
     const tx = await this.data.prepareRegistry(encryptionSchema);
     const receipt = await tx.wait();
     // console.log(receipt);
-    const event = receipt.events.find((event: { event: any; }) => event.event === 'DataPrepareRegistry');
+    const event = receipt.events.find((event: { event: any }) => event.event === 'DataPrepareRegistry');
     if (!event) {
       throw new Error('prepareRegistry failed');
     }
@@ -90,11 +92,11 @@ export default class EthereumContract extends BaseContract {
     // console.log('rawPublickeys', rawPublickeys);
     // console.log('policy', policy);
     const encryptData = this.encrypt_v2(rawPublickeys, data, policy);
+    const transactionIdMsg = await this.storage.submitData(encryptData.enc_msg);
+    const transactionIdSks = await this.storage.submitData(encryptData.enc_sks);
 
-
-    //save it to arweave
-    const transactionId = await this.storage.submitData(encryptData);
-    const transactionIdHexStr = arseedingBase64ToHexStr(transactionId);
+    const transactionId = `enc_msg:${transactionIdMsg};enc_sks:${transactionIdSks}`;
+    const transactionIdHexStr = arseedingHexStrToBase64(transactionId);
     dataTag['storageType'] = this.storageType;
     const dataTagStr = JSON.stringify(dataTag);
     const priceInfoStr = {
@@ -107,7 +109,7 @@ export default class EthereumContract extends BaseContract {
     // console.log(`transactionIdHexStr:${transactionIdHexStr}`);
     const registryTx = await this.data.register(dataId, dataTag, priceInfoStr, transactionIdHexStr, permissionCheckers);
     const registryReceipt = await registryTx.wait();
-    const registryEvent = registryReceipt.events.find((event: { event: any; }) => event.event === 'DataRegistered');
+    const registryEvent = registryReceipt.events.find((event: { event: any }) => event.event === 'DataRegistered');
     if (!registryEvent) {
       throw new Error('data register failed');
     }
@@ -146,7 +148,7 @@ export default class EthereumContract extends BaseContract {
    */
   async submitTask(taskType: TaskType, dataId: string, dataUserPk: string) {
     const realTaskType = TASK_MAPPING[taskType];
-    if(realTaskType === undefined){
+    if (realTaskType === undefined) {
       throw new Error(`taskType ${taskType} is not supported`);
     }
     let encData = await this.data.getDataById(dataId);
@@ -164,18 +166,20 @@ export default class EthereumContract extends BaseContract {
     const totalPrice = Number(dataPrice) + Number(nodePrice) * workerIds.length;
 
     // console.log(`Buffer.from(this.userKey.pk,'hex'):${Buffer.from(publicKey,'hex')}`);
-    const pkTransactionHash = await this.storage.submitData(new Uint8Array(Buffer.from(dataUserPk, 'hex')), this.storageWallet);
+    const pkTransactionHash = await this.storage.submitData(
+      new Uint8Array(Buffer.from(dataUserPk, 'hex')),
+      this.storageWallet
+    );
     const pkTransactionHashHexStr = arseedingBase64ToHexStr(pkTransactionHash);
     const tx = await this.task.submitTask(realTaskType, pkTransactionHashHexStr, dataId, totalPrice);
     const receipt = await tx.wait();
     // console.log(receipt)
-    const event = receipt.events.find((event: { event: any; }) => event.event === 'TaskDispatched');
+    const event = receipt.events.find((event: { event: any }) => event.event === 'TaskDispatched');
     if (!event) {
       throw new Error('submitTask failed');
     }
     return event.args.taskId;
   }
-
 
   /**
    * @param taskId - The ID of the task to retrieve the result for.
@@ -186,9 +190,17 @@ export default class EthereumContract extends BaseContract {
     const task = await this.task._getCompletedTaskByIdPromise(taskId, timeout);
 
     const dataFromContract = await this.data.getDataById(task.dataId);
-    const itemIdForArSeeding = arseedingHexStrToBase64(dataFromContract.dataContent);
+    const content = arseedingHexStrToBase64(dataFromContract.dataContent);
     // console.log(`itemIdForArSeeding:${itemIdForArSeeding}`);
-    const encData = await this.storage.getData(itemIdForArSeeding);
+    //get enc_msg
+    // split by ';'
+    const parts = content.split(';');
+
+    // find enc_msg
+    const encMsgPart = parts.find((part) => part.startsWith('enc_msg'));
+    const encMsg = encMsgPart ? encMsgPart.split(':')[1] : null;
+
+    const encData = await this.storage.getData(encMsg);
     const chosenIndices = [];
     const reencChosenSks = [];
     for (let i = 0; i < task.computingInfo.results.length; i++) {
@@ -202,7 +214,8 @@ export default class EthereumContract extends BaseContract {
     // console.log(`reencChosenSks:${reencChosenSks}`);
     // console.log(`encData:${encData}`);
     // console.log(`chosenIndices:${chosenIndices}`);
-    return this.decrypt_v2(reencChosenSks, dataUserSk, encData, chosenIndices);
+    const result = this.decrypt_v2(reencChosenSks, dataUserSk, encData, chosenIndices);
+    return result.msg;
   }
 
   /**
@@ -210,7 +223,7 @@ export default class EthereumContract extends BaseContract {
    * @param userAddress user wallet address
    * @param tokenSymbol token symbol
    */
-  async getBalance(userAddress: Address, tokenSymbol: string){
+  async getBalance(userAddress: Address, tokenSymbol: string) {
     return await this.fee.getBalance(userAddress, tokenSymbol);
   }
 
@@ -220,7 +233,7 @@ export default class EthereumContract extends BaseContract {
    * @param tokenSymbol
    * @param amount
    */
-  async withdrawToken(toAddress: Address, tokenSymbol: string, amount: Uint256){
+  async withdrawToken(toAddress: Address, tokenSymbol: string, amount: Uint256) {
     return await this.fee.withdrawToken(toAddress, tokenSymbol, amount);
   }
 }
