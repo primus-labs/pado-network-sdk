@@ -1,8 +1,8 @@
 import Arweave from 'arweave';
 import { StorageType, WalletWithType,SupportedSymbols } from '../types/index';
 
-interface IBaseStorage {
-  submitData(data: string | Uint8Array | ArrayBuffer, symbol: SupportedSymbols): Promise<string>;
+export interface IBaseStorage {
+  submitData(data: string | Uint8Array | ArrayBuffer, symbol: SupportedSymbols, mustPay: boolean): Promise<string>;
 
   getData(transactionId: string): Promise<Uint8Array>;
 }
@@ -25,7 +25,7 @@ export default class BaseStorage implements IBaseStorage {
     this.arweave = Arweave.init(ARConfig);
   }
 
-  async submitData(data: Uint8Array, symbol: SupportedSymbols): Promise<string> {
+  async submitData(data: Uint8Array, symbol: SupportedSymbols, mustPay: boolean): Promise<string> {
     return Promise.resolve('');
   }
 

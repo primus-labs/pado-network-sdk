@@ -67,7 +67,7 @@ export default class ArweaveContract extends BaseContract {
     // if (!encryptedData) {
     //   throw new Error('The encrypted Data to be uploaded can not be empty');
     // }
-    const transactionId = await this.storage.submitData(encryptData.enc_msg);
+    const transactionId = await this.storage.submitData(encryptData.enc_msg,'wAR',true);
     dataTag['storageType'] = this.storage.StorageType;
 
     const txData = {

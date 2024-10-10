@@ -24,9 +24,10 @@ export default class ArseedingStorage extends BaseStorage {
    *
    * @param data - The data to be submitted, in the form of a Uint8Array.
    * @param symbol - which symbol to pay
+   * @param mustPay - Whether pay for the data
    * @returns A Promise that resolves to a string representing the item ID of the submitted data.
    */
-  async submitData(data: Uint8Array, symbol: SupportedSymbols = 'ETH'): Promise<string> {
+  async submitData(data: Uint8Array, symbol: SupportedSymbols = 'ETH', mustPay: boolean = true): Promise<string> {
     if (this.runtimeEnv() === RuntimeEnv.Node) {
       throw new Error('Running in a node environment is not supported');
     }
@@ -63,6 +64,10 @@ export default class ArseedingStorage extends BaseStorage {
     // @ts-ignore
     const order = await createAndSubmitItem(data.buffer, options, config);
     console.log('order', order);
+    if(!mustPay){
+      //if not mustPay, return itemId
+      return order.itemId;
+    }
     //pay for order
     if (wallet.walletType === 'arweave') {
       //explorer

@@ -10,9 +10,10 @@ export default class ArweaveStorage extends BaseStorage {
    *
    * @param data - The data to be submitted, can be in the form of a string, Uint8Array, or ArrayBuffer.
    * @param symbol - which symbol to pay.
+   * @param mustPay
    * @returns A Promise that resolves to the transaction ID once the data has been successfully submitted.
    */
-  async submitData(data: Uint8Array,symbol: SupportedSymbols='wAR'): Promise<string> {
+  async submitData(data: Uint8Array,symbol: SupportedSymbols='wAR', mustPay: boolean = true): Promise<string> {
     let createTransactionParams: createTransactionParamsTuple = [
       {
         data

@@ -93,7 +93,7 @@ export default class EthereumContract extends BaseContract {
 
 
     //save it to arweave
-    const transactionId = await this.storage.submitData(encryptData);
+    const transactionId = await this.storage.submitData(encryptData,'ETH',true);
     const transactionIdHexStr = arseedingBase64ToHexStr(transactionId);
     dataTag['storageType'] = this.storageType;
     const dataTagStr = JSON.stringify(dataTag);
@@ -164,7 +164,7 @@ export default class EthereumContract extends BaseContract {
     const totalPrice = Number(dataPrice) + Number(nodePrice) * workerIds.length;
 
     // console.log(`Buffer.from(this.userKey.pk,'hex'):${Buffer.from(publicKey,'hex')}`);
-    const pkTransactionHash = await this.storage.submitData(new Uint8Array(Buffer.from(dataUserPk, 'hex')), this.storageWallet);
+    const pkTransactionHash = await this.storage.submitData(new Uint8Array(Buffer.from(dataUserPk, 'hex')), 'ETH', false);
     const pkTransactionHashHexStr = arseedingBase64ToHexStr(pkTransactionHash);
     const tx = await this.task.submitTask(realTaskType, pkTransactionHashHexStr, dataId, totalPrice);
     const receipt = await tx.wait();

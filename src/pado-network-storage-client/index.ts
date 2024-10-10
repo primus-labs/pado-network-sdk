@@ -23,11 +23,12 @@ export default class PadoNetworkStorageClient {
    * The result of the submission is returned as a promise that resolves to a string.
    *
    * @param data - A Uint8Array representing the data to be submitted.
-   * @param wallet - An object representing the wallet used for the submission.
+   * @param symbol
+   * @param mustPay
    * @returns A Promise that resolves to a string, typically a confirmation or response from the submission.
    */
-  async submitData(data: Uint8Array): Promise<string> {
-    return await this._client.submitData(data);
+  async submitData(data: Uint8Array, symbol: string, mustPay: boolean): Promise<string> {
+    return await this._client.submitData(data,symbol,mustPay);
   }
 
   /**
