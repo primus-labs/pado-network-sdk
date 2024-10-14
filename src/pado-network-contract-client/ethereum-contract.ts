@@ -192,7 +192,7 @@ export default class EthereumContract extends BaseContract {
     const chosenIndices = [];
     const reencChosenSks = [];
     for (let i = 0; i < task.computingInfo.results.length; i++) {
-      if (task.computingInfo.results[i].length === 0) {
+      if (task.computingInfo.results[i].length === 2) {
         continue;
       }
       const dataItemId = arseedingHexStrToBase64(task.computingInfo.results[i]);
