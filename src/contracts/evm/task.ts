@@ -40,7 +40,7 @@ export default class TaskC extends BaseEvm {
         try {
           task = await this.contractInstance.getCompletedTaskById(taskId);
         } catch (err) {
-          console.log(err);
+          // console.log(err);
         }
         if (task) {
           resolve(task);
